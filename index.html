@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lincoln Check In</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Check In">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#13245f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: kiosk for a classroom iPad. Bell strip on top, name wall on the left, bathroom queue and today's late list on the right. */
+:root{
+  --bg:#eef1f7; --surface:#ffffff; --surface-2:#f6f8fc; --ink:#0d1530; --muted:#5a6483; --line:#dbe1ee;
+  --navy:#13245f; --navy-ink:#ffffff; --navy-soft:#e3e8f7;
+  --late:#c2410c; --late-soft:#fdeee3; --red:#b42318; --red-soft:#fbe7e5;
+  --ok:#0f7a4f; --ok-soft:#e1f4ea; --paper:#ffffff; --pen:#111a3a;
+  --shadow:0 1px 2px rgba(13,21,48,.06),0 8px 24px rgba(13,21,48,.06);
+  --display:"Bricolage Grotesque","Figtree",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0a0f1f; --surface:#121a30; --surface-2:#0f1629; --ink:#e7ebf7; --muted:#97a1c0; --line:#243150;
+  --navy:#9fb4ff; --navy-ink:#0a0f1f; --navy-soft:#1b2747;
+  --late:#ff9b5e; --late-soft:#3a2216; --red:#ff7b6f; --red-soft:#3b1817;
+  --ok:#4bdc9c; --ok-soft:#10301f; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a0f1f; --surface:#121a30; --surface-2:#0f1629; --ink:#e7ebf7; --muted:#97a1c0; --line:#243150;
+  --navy:#9fb4ff; --navy-ink:#0a0f1f; --navy-soft:#1b2747;
+  --late:#ff9b5e; --late-soft:#3a2216; --red:#ff7b6f; --red-soft:#3b1817;
+  --ok:#4bdc9c; --ok-soft:#10301f; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark}
+
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--navy);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.app{max-width:1280px;margin:0 auto;padding-block:18px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+
+/* Header */
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.eyebrow{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.now-title{font-family:var(--display);font-weight:700;font-size:clamp(26px,3.4vw,38px);line-height:1.05;margin:4px 0 4px;text-wrap:balance}
+.now-sub{color:var(--muted);font-weight:500}
+.now-sub b{color:var(--ink);font-weight:600}
+.top-right{display:flex;align-items:center;gap:14px}
+.clock{font-family:var(--display);font-weight:500;font-size:clamp(30px,4vw,44px);letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1}
+.iconbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;box-shadow:var(--shadow)}
+.iconbtn svg{width:22px;height:22px}
+
+/* Bell strip */
+.bell{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px;overflow-x:auto}
+.bell-row{display:flex;gap:4px;min-width:640px}
+.seg{position:relative;border-radius:9px;padding:7px 8px 6px;background:var(--surface-2);color:var(--muted);min-width:0;overflow:hidden}
+.seg b{display:block;font-size:13px;font-weight:700}
+.seg span{font-size:11.5px;white-space:nowrap}
+.seg.teach{background:var(--navy-soft);color:var(--ink)}
+.seg.cur{outline:2px solid var(--navy);outline-offset:-2px}
+.seg .fill{position:absolute;inset:0 auto 0 0;background:var(--navy);opacity:.12;pointer-events:none}
+.seg .mark{position:absolute;top:0;bottom:0;width:2px;background:var(--navy)}
+
+/* Tabs */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tab{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:9px 16px;font-weight:600;display:flex;gap:8px;align-items:center;min-height:44px}
+.tab small{color:var(--muted);font-weight:500}
+.tab[aria-pressed="true"]{background:var(--navy);color:var(--navy-ink);border-color:var(--navy)}
+.tab[aria-pressed="true"] small{color:inherit;opacity:.8}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}
+.tab[aria-pressed="true"] .dot{box-shadow:none;background:var(--navy-ink)}
+.relive{margin-left:auto;border:0;background:none;color:var(--navy);font-weight:600;padding:8px}
+
+/* Main grid */
+.main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+@media (max-width:900px){.main{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);min-width:0}
+.panel h2{font-family:var(--display);font-size:22px;font-weight:700;margin:0}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.hint{color:var(--muted);font-size:14px}
+.side{display:flex;flex-direction:column;gap:16px;min-width:0}
+
+/* Name wall */
+.names{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.name{border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:14px 12px;text-align:left;min-height:64px;display:flex;flex-direction:column;justify-content:center;gap:4px;font-weight:600;font-size:15.5px;transition:transform .08s ease,border-color .15s}
+.name:active{transform:scale(.97)}
+.name .tag{font-size:12px;font-weight:600;color:var(--late);font-variant-numeric:tabular-nums}
+.name.signed{background:var(--late-soft);border-color:transparent}
+.name[disabled]{cursor:default}
+.empty{border:1.5px dashed var(--line);border-radius:12px;padding:28px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:12px}
+.empty strong{color:var(--ink);font-size:17px}
+
+/* Buttons */
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:11px 16px;font-weight:600;min-height:44px}
+.btn.primary{background:var(--navy);color:var(--navy-ink);border-color:var(--navy)}
+.btn.go{background:var(--ok);color:#fff;border-color:var(--ok)}
+:root[data-theme="dark"] .btn.go{color:#06170f}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.go{color:#06170f}}
+.btn.danger{color:var(--red);border-color:var(--red-soft);background:var(--red-soft)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.block{width:100%}
+.btn.sm{padding:7px 11px;min-height:36px;font-size:14px}
+
+/* Bathroom */
+.status{border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.status.open{background:var(--ok-soft)}
+.status.locked{background:var(--surface-2)}
+.status.out{background:var(--navy-soft)}
+.status.over{background:var(--red-soft)}
+.status .big{font-family:var(--display);font-size:22px;font-weight:700;line-height:1.15}
+.status .small{color:var(--muted);font-size:14px}
+.timer{font-variant-numeric:tabular-nums;font-family:var(--display);font-size:30px;font-weight:500}
+.queue{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:6px}
+.queue li{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2);border-radius:10px;font-weight:600}
+.queue .pos{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--navy-soft);color:var(--navy);font-size:13px;flex:none}
+.queue li:first-child .pos{background:var(--navy);color:var(--navy-ink)}
+.queue .grow{flex:1;min-width:0;overflow-wrap:anywhere}
+.qempty{color:var(--muted);font-size:14px;margin:0 0 14px}
+
+/* Late list */
+.latelist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.latelist li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.latelist li:first-child{border-top:0}
+.latelist .who{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.latelist .when{color:var(--muted);font-size:13px}
+.chip{font-size:12.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--late-soft);color:var(--late);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip.bad{background:var(--red-soft);color:var(--red)}
+.count{font-family:var(--display);font-size:22px;font-weight:700}
+
+/* Modal */
+.scrim{position:fixed;inset:0;background:rgba(6,10,24,.55);display:grid;place-items:center;padding:20px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));z-index:50;animation:fade .15s ease}
+.sheet{background:var(--surface);border-radius:20px;width:min(620px,100%);max-height:calc(100vh - 40px);overflow:auto;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.sheet.wide{width:min(980px,100%);padding:0;display:flex;flex-direction:column}
+.sheet h3{font-family:var(--display);font-size:26px;margin:0 0 4px;line-height:1.1;text-wrap:balance}
+.sheet .lead{color:var(--muted);margin:0 0 16px}
+.sigwrap{position:relative;border:1.5px solid var(--line);border-radius:14px;overflow:hidden;background:var(--paper)}
+.sig{display:block;width:100%;height:200px;touch-action:none;background:var(--paper)}
+.sigline{position:absolute;left:20px;right:20px;bottom:46px;border-bottom:1.5px dashed #c5cbe0;pointer-events:none}
+.sigx{position:absolute;left:20px;bottom:50px;color:#9aa3c0;font-size:20px;pointer-events:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+.spacer{flex:1}
+.latebadge{display:inline-flex;align-items:center;gap:6px;background:var(--late-soft);color:var(--late);font-weight:700;border-radius:999px;padding:5px 12px;margin-bottom:12px;font-variant-numeric:tabular-nums}
+@keyframes fade{from{opacity:.4}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.scrim{animation:none}.name{transition:none}}
+
+/* Picker */
+.pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:16px}
+.pick button{border:1px solid var(--line);background:var(--surface-2);border-radius:11px;padding:12px;text-align:left;font-weight:600;min-height:52px}
+.pick button[disabled]{opacity:.45;cursor:not-allowed}
+.pick button small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+
+/* PIN */
+.pinwrap{text-align:center}
+.pindots{display:flex;gap:14px;justify-content:center;margin:14px 0 18px}
+.pindots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--navy)}
+.pindots i.on{background:var(--navy)}
+.pinpad{display:grid;grid-template-columns:repeat(3,72px);gap:10px;justify-content:center}
+.pinpad button{height:60px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2);font-size:22px;font-weight:600}
+.pinerr{color:var(--red);min-height:22px;font-weight:600;margin-top:10px}
+
+/* Settings */
+.set-head{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line)}
+.set-head h3{margin:0}
+.set-body{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:0;flex:1;overflow:hidden}
+@media (max-width:700px){.set-body{grid-template-columns:minmax(0,1fr)}.set-nav{flex-direction:row!important;overflow-x:auto;border-right:0!important;border-bottom:1px solid var(--line)}}
+.set-nav{display:flex;flex-direction:column;gap:4px;padding:14px;border-right:1px solid var(--line)}
+.set-nav button{border:0;background:none;text-align:left;padding:10px 12px;border-radius:10px;font-weight:600;color:var(--muted);white-space:nowrap}
+.set-nav button[aria-pressed="true"]{background:var(--navy-soft);color:var(--ink)}
+.set-pane{padding:20px 22px;overflow:auto;max-height:calc(100vh - 140px);display:flex;flex-direction:column;gap:18px;min-width:0}
+.set-pane h4{font-family:var(--display);font-size:18px;margin:0}
+.card{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label,.lbl{font-size:13px;font-weight:600;color:var(--muted)}
+input[type=text],input[type=number],input[type=time],select,textarea{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:10px 12px;min-height:42px;width:100%}
+textarea{min-height:140px;resize:vertical;line-height:1.5}
+input[type=number]{width:96px}
+.switch{display:flex;align-items:center;gap:10px;font-weight:600}
+.switch input{width:22px;height:22px;accent-color:var(--navy)}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl input[type=time]{width:150px;min-height:38px;padding:6px 8px}
+.tblwrap{overflow-x:auto}
+.sigthumb{height:34px;width:auto;border-radius:6px;background:var(--paper);border:1px solid var(--line)}
+.banlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px}
+.banlist label{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:10px;background:var(--surface-2);font-weight:600}
+.banlist label.on{background:var(--red-soft);color:var(--red)}
+.banlist input{width:20px;height:20px;accent-color:var(--red)}
+.note{font-size:13px;color:var(--muted)}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:14px 20px;border-radius:14px;font-weight:600;z-index:80;max-width:calc(100% - 32px);box-shadow:0 10px 30px rgba(0,0,0,.25);text-align:center}
+.banner{background:var(--red-soft);color:var(--red);border-radius:12px;padding:10px 14px;font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <header class="top">
+    <div style="min-width:0">
+      <div class="eyebrow" id="dayLabel">Abraham Lincoln HS</div>
+      <div class="now-title" id="nowTitle">Loading</div>
+      <div class="now-sub" id="nowSub"></div>
+    </div>
+    <div class="top-right">
+      <div class="clock" id="clock">--:--</div>
+      <button class="iconbtn" id="gear" aria-label="Teacher settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </button>
+    </div>
+  </header>
+  <div id="storageBanner" class="banner" hidden>This browser is not saving data right now. Logs will be lost when the page closes. Export to Excel before leaving.</div>
+  <div class="bell" aria-label="Today's bell schedule"><div class="bell-row" id="bell"></div></div>
+  <nav class="tabs" id="tabs" aria-label="Your periods"></nav>
+  <div class="main">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Late sign in</h2>
+        <span class="hint" id="signHint">Tap your name, then sign.</span>
+      </div>
+      <div id="names"></div>
+    </section>
+    <aside class="side">
+      <section class="panel">
+        <div class="panel-head"><h2>Bathroom</h2><span class="hint" id="bathHint"></span></div>
+        <div id="bath"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Late today</h2><span class="count num" id="lateCount">0</span></div>
+        <ul class="latelist" id="lateList"></ul>
+      </section>
+    </aside>
+  </div>
+</div>
+<div id="modal"></div>
+
+<script src="xlsx.full.min.js"></script>
+<script>
+/* ---------- Bell schedules (Abraham Lincoln HS) ---------- */
+const REG=[["1","7:48","8:38"],["2","8:41","9:29"],["3","9:32","10:20"],["4","10:23","11:11"],["5","11:14","12:02"],["6","12:05","12:53"],["7","12:56","13:44"],["8","13:47","14:35"],["9","14:38","15:28"]];
+const FRI=[["1","7:48","8:18"],["2","8:21","8:51"],["3","8:54","9:24"],["4","9:27","9:57"],["5","10:00","10:30"],["6","10:33","11:03"],["7","11:06","11:36"],["8","11:39","12:09"],["9","12:12","12:42"],["A","12:50","13:38"],["B","13:47","14:35"]];
+const KEYS=["1","2","3","4","5","6","7","8","9","A","B"];
+const DAYNAMES={regular:"Regular day",friday:"Friday schedule",none:"No school"};
+const toMin=s=>{const[h,m]=s.split(":").map(Number);return h*60+m};
+const sched=t=>(t==="friday"?FRI:t==="regular"?REG:[]).map(([key,a,b])=>({key,start:toMin(a),end:toMin(b)}));
+const pName=k=>/\d/.test(k)?"Period "+k:"Session "+k;
+const pShort=k=>/\d/.test(k)?"P"+k:"S"+k;
+
+/* ---------- State (saved only in this browser) ---------- */
+const STORE="lincoln-check-in-v1";
+function fresh(){
+  const periods={};
+  KEYS.forEach(k=>periods[k]={teach:false,label:"",roster:[]});
+  [["2","APUSH"],["3","APUSH"],["6","Con Law"],["7","Con Law"],["8","Con Law"]].forEach(([k,l])=>{periods[k].teach=true;periods[k].label=l});
+  return {v:1,periods,grace:2,noStart:10,noEnd:10,flag:8,pin:null,override:null,late:[],bathLog:[],bans:[],bath:null};
+}
+let S=fresh(), canStore=true;
+try{const raw=localStorage.getItem(STORE);if(raw){S=Object.assign(fresh(),JSON.parse(raw))}}catch(e){canStore=false}
+function save(){
+  try{localStorage.setItem(STORE,JSON.stringify(S));canStore=true}
+  catch(e){canStore=false;toast("Storage is full. Export to Excel, then clear old logs in Teacher settings.")}
+  document.getElementById("storageBanner").hidden=canStore;
+}
+try{localStorage.setItem(STORE+"-t","1");localStorage.removeItem(STORE+"-t")}catch(e){canStore=false}
+document.getElementById("storageBanner").hidden=canStore;
+
+/* ---------- Helpers ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+const pad=n=>String(n).padStart(2,"0");
+const dkey=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parseD=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const atMin=(ds,min)=>{const d=parseD(ds);d.setHours(Math.floor(min/60),min%60,0,0);return d.getTime()};
+const fmtMin=m=>{const h=Math.floor(m/60),mm=m%60;return ((h+11)%12+1)+":"+pad(mm)+" "+(h<12?"AM":"PM")};
+const fmtT=(ms,sec)=>new Date(ms).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",second:sec?"2-digit":undefined});
+const fmtDate=ds=>parseD(ds).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+const lateMins=(arrived,ds,startMin)=>Math.max(0,Math.floor((arrived-atMin(ds,startMin))/60000));
+const lateText=m=>m===1?"1 min late":m+" min late";
+function dayType(ds){
+  if(S.override&&S.override.date===ds)return S.override.type;
+  const w=parseD(ds).getDay();return w===0||w===6?"none":w===5?"friday":"regular";
+}
+function periodOn(ds,key){return sched(dayType(ds)).find(p=>p.key===key)}
+function taught(){return KEYS.filter(k=>S.periods[k].teach)}
+function student(id){for(const k of KEYS){const s=S.periods[k].roster.find(r=>r.id===id);if(s)return s}return null}
+function isBanned(id){return S.bans.includes(id)}
+
+function live(){
+  const now=new Date(),ds=dkey(now),type=dayType(ds),sc=sched(type);
+  const nm=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
+  if(type==="none")return {ds,type,sc,nm,key:null,state:"none"};
+  const cur=sc.find(p=>nm>=p.start&&nm<p.end);
+  if(cur&&S.periods[cur.key].teach)return {ds,type,sc,nm,key:cur.key,p:cur,state:"in"};
+  const next=sc.find(p=>p.start>nm&&S.periods[p.key].teach);
+  if(next)return {ds,type,sc,nm,key:next.key,p:next,state:"upcoming",cur};
+  return {ds,type,sc,nm,key:null,state:"done",cur};
+}
+
+/* ---------- UI state ---------- */
+let sel=null, manual=false, lastLiveKey=undefined;
+function syncSel(L){
+  const t=taught().filter(k=>L.sc.some(p=>p.key===k)||L.type==="none");
+  if(L.key!==lastLiveKey){manual=false;lastLiveKey=L.key}
+  if(!manual||!t.includes(sel)){sel=L.key||(L.state==="done"?t[t.length-1]:t[0])||taught()[0]||null}
+}
+
+/* ---------- Toast ---------- */
+let toastT;
+function toast(msg){
+  let el=document.querySelector(".toast");
+  if(!el){el=document.createElement("div");el.className="toast";el.setAttribute("role","status");document.body.appendChild(el)}
+  el.textContent=msg;clearTimeout(toastT);toastT=setTimeout(()=>el.remove(),3200);
+}
+
+/* ---------- Render ---------- */
+function render(){
+  const L=live();syncSel(L);
+  renderHeader(L);renderBell(L);renderTabs(L);renderNames(L);renderBath(L);renderLate(L);
+}
+function renderHeader(L){
+  $("dayLabel").textContent=fmtDate(L.ds)+" · "+DAYNAMES[L.type]+(S.override&&S.override.date===L.ds?" (set by teacher)":"");
+  let t,s;
+  const lab=k=>S.periods[k].label?" · "+S.periods[k].label:"";
+  if(L.state==="in"){const left=Math.ceil(L.p.end-L.nm);t=pName(L.key)+lab(L.key);s="In session · <b class='num'>"+left+" min</b> left · ends "+fmtMin(L.p.end)}
+  else if(L.state==="upcoming"){const til=Math.ceil(L.p.start-L.nm);t="Up next: "+pName(L.key)+lab(L.key);s="Starts "+fmtMin(L.p.start)+" · in <b class='num'>"+til+" min</b>"}
+  else if(L.state==="done"){t="Classes are done for today";s="Your last period has ended."}
+  else {t="No school today";s="The log is still here. Open Teacher settings to export or edit."}
+  $("nowTitle").textContent=t;$("nowSub").innerHTML=s;
+}
+function renderBell(L){
+  const sc=L.sc.length?L.sc:sched("regular");
+  $("bell").innerHTML=sc.map(p=>{
+    const isCur=L.type!=="none"&&L.nm>=p.start&&L.nm<p.end;
+    const pct=isCur?((L.nm-p.start)/(p.end-p.start)*100):0;
+    const tch=S.periods[p.key].teach;
+    return `<div class="seg${tch?" teach":""}${isCur?" cur":""}" style="flex:${p.end-p.start}">${isCur?`<div class="fill" style="width:${pct}%"></div><div class="mark" style="left:${pct}%"></div>`:""}<b>${pShort(p.key)}${tch&&S.periods[p.key].label?" · "+esc(S.periods[p.key].label):""}</b><span class="num">${fmtMin(p.start)}</span></div>`;
+  }).join("");
+}
+function renderTabs(L){
+  const t=taught();
+  let h=t.map(k=>`<button class="tab" data-k="${k}" aria-pressed="${k===sel}">${L.key===k&&L.state==="in"?'<span class="dot"></span>':""}${pName(k)}${S.periods[k].label?` <small>${esc(S.periods[k].label)}</small>`:""}</button>`).join("");
+  if(manual&&L.key&&sel!==L.key)h+=`<button class="relive" id="relive">Back to ${pName(L.key)}</button>`;
+  $("tabs").innerHTML=h||`<span class="hint">Pick the periods you teach in Teacher settings.</span>`;
+  $("tabs").querySelectorAll(".tab").forEach(b=>b.onclick=()=>{sel=b.dataset.k;manual=true;render()});
+  const r=$("relive");if(r)r.onclick=()=>{manual=false;render()};
+}
+function todaysLate(ds,k){return S.late.filter(e=>e.date===ds&&e.period===k).sort((a,b)=>a.arrived-b.arrived)}
+function renderNames(L){
+  const box=$("names");
+  if(!sel){box.innerHTML=`<div class="empty"><strong>No periods set up</strong>Open Teacher settings and choose the periods you teach.<button class="btn primary" data-open="classes">Open Teacher settings</button></div>`;wireOpen(box);return}
+  const roster=S.periods[sel].roster;
+  const isLive=sel===L.key;
+  $("signHint").textContent=isLive&&L.state==="in"?"Tap your name, then sign.":isLive?"Opens when "+pName(sel)+" starts.":"Viewing "+pName(sel)+". Sign in works during the live period.";
+  if(!roster.length){box.innerHTML=`<div class="empty"><strong>No names for ${pName(sel)} yet</strong>Add your roster in Teacher settings, one name per line. Names stay on this iPad only.<button class="btn primary" data-open="classes">Add roster</button></div>`;wireOpen(box);return}
+  const p=periodOn(L.ds,sel);
+  const signed={};todaysLate(L.ds,sel).forEach(e=>signed[e.studentId]=e);
+  box.innerHTML=`<div class="names">${roster.map(s=>{const e=signed[s.id];return `<button class="name${e?" signed":""}" data-id="${s.id}">${esc(s.name)}${e?`<span class="tag">${lateText(p?lateMins(e.arrived,e.date,p.start):e.mins)} · ${fmtT(e.arrived)}</span>`:""}</button>`}).join("")}</div>`;
+  box.querySelectorAll(".name").forEach(b=>b.onclick=()=>tapName(b.dataset.id));
+}
+function wireOpen(root){root.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openSettings(b.dataset.open))}
+
+function renderLate(L){
+  const list=sel?todaysLate(L.ds,sel):[];
+  const p=sel?periodOn(L.ds,sel):null;
+  $("lateCount").textContent=list.length;
+  $("lateList").innerHTML=list.length?list.map(e=>{const m=p?lateMins(e.arrived,e.date,p.start):e.mins;return `<li><div style="min-width:0"><div class="who">${esc(e.name)}</div><div class="when num">Came in ${fmtT(e.arrived)}${e.edited?" · edited":""}</div></div><span class="chip${m>=10?" bad":""}">${lateText(m)}</span></li>`}).join(""):`<li class="hint">Nobody late${sel?" in "+pName(sel):""} today.</li>`;
+}
+
+/* ---------- Late sign in ---------- */
+function tapName(id){
+  const tapAt=Date.now();
+  const L=live();
+  const s=student(id);if(!s)return;
+  if(L.key!==sel){toast("Sign in works during "+(L.key?pName(L.key):"class time")+".");return}
+  if(L.state!=="in"){toast("You're on time. Have a seat.");return}
+  const prev=S.late.find(e=>e.date===L.ds&&e.period===sel&&e.studentId===id);
+  if(prev){toast(s.name+" already signed in at "+fmtT(prev.arrived)+".");return}
+  const diff=tapAt-atMin(L.ds,L.p.start);
+  if(diff<=S.grace*60000){toast("You're on time, "+s.name.split(" ")[0]+". Have a seat.");return}
+  openSign(s,L,tapAt);
+}
+function openSign(s,L,tapAt){
+  const mins=lateMins(tapAt,L.ds,L.p.start);
+  showModal(`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sgT">
+    <span class="latebadge">${lateText(mins)} · ${fmtT(tapAt)}</span>
+    <h3 id="sgT">${esc(s.name)}, sign below</h3>
+    <p class="lead">You came in at ${fmtT(tapAt)}. ${pName(L.key)} started at ${fmtMin(L.p.start)}.</p>
+    <div class="sigwrap"><canvas class="sig" id="sig"></canvas><div class="sigline"></div><div class="sigx">×</div></div>
+    <div class="row" style="margin-top:16px"><button class="btn" id="sgCancel">Not me</button><span class="spacer"></span><button class="btn" id="sgClear">Clear</button><button class="btn primary" id="sgOk" disabled>Sign in</button></div>
+  </div>`);
+  const pad=sigPad($("sig"),has=>$("sgOk").disabled=!has);
+  $("sgClear").onclick=()=>pad.clear();
+  $("sgCancel").onclick=closeModal;
+  $("sgOk").onclick=()=>{
+    S.late.push({id:uid(),date:L.ds,period:L.key,label:S.periods[L.key].label,studentId:s.id,name:s.name,start:L.p.start,arrived:tapAt,mins,sig:pad.image(),edited:false});
+    save();closeModal();render();toast("Signed in. "+lateText(mins)+".");
+  };
+}
+function sigPad(cv,onChange){
+  const ctx=cv.getContext("2d");let down=false,has=false,last=null;
+  function size(){const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;ctx.setTransform(d,0,0,d,0,0);ctx.fillStyle="#ffffff";ctx.fillRect(0,0,r.width,r.height);ctx.lineWidth=2.8;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#111a3a"}
+  size();
+  const pt=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+  cv.onpointerdown=e=>{e.preventDefault();down=true;try{cv.setPointerCapture(e.pointerId)}catch(_){}last=pt(e);ctx.beginPath();ctx.arc(last.x,last.y,1.3,0,Math.PI*2);ctx.fillStyle="#111a3a";ctx.fill();if(!has){has=true;onChange(true)}};
+  cv.onpointermove=e=>{if(!down)return;const p=pt(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.stroke();last=p};
+  cv.onpointerup=cv.onpointercancel=()=>{down=false};
+  return{clear(){size();has=false;onChange(false)},image(){const o=document.createElement("canvas");o.width=360;o.height=120;const c=o.getContext("2d");c.fillStyle="#fff";c.fillRect(0,0,360,120);c.drawImage(cv,0,0,360,120);return o.toDataURL("image/png")}};
+}
+
+/* ---------- Bathroom ---------- */
+function bathFor(L){
+  if(!L.key||L.state!=="in")return null;
+  if(!S.bath||S.bath.date!==L.ds||S.bath.period!==L.key){
+    if(S.bath&&S.bath.out){const o=S.bath.out,s=student(o.id);S.bathLog.push({id:uid(),date:S.bath.date,period:S.bath.period,studentId:o.id,name:s?s.name:o.name,left:o.since,back:null})}
+    S.bath={date:L.ds,period:L.key,queue:[],out:null};save();
+  }
+  S.bath.queue=S.bath.queue.filter(id=>!isBanned(id));
+  return S.bath;
+}
+function bathWindow(L){const a=L.p.start+S.noStart,b=L.p.end-S.noEnd;return{a,b,open:L.nm>=a&&L.nm<b}}
+function renderBath(L){
+  const box=$("bath");
+  if(!sel||sel!==L.key||L.state!=="in"){
+    $("bathHint").textContent="";
+    const p=sel?periodOn(L.ds,sel):null;
+    box.innerHTML=`<div class="status locked"><div class="big">Queue opens during class</div><div class="small">${p?pName(sel)+" runs "+fmtMin(p.start)+" to "+fmtMin(p.end)+". No one leaves in the first "+S.noStart+" or last "+S.noEnd+" minutes.":"Choose a period you teach."}</div></div>`;return;
+  }
+  const B=bathFor(L),W=bathWindow(L);
+  $("bathHint").textContent="Open "+fmtMin(W.a)+" to "+fmtMin(Math.max(W.a,W.b));
+  let st="";
+  if(B.out){
+    const s=student(B.out.id),secs=Math.floor((Date.now()-B.out.since)/1000),over=secs>=S.flag*60;
+    st=`<div class="status ${over?"over":"out"}"><div class="small">Out of class</div><div class="big">${esc(s?s.name:"Student")}</div><div class="timer" id="outTimer">${Math.floor(secs/60)}:${pad(secs%60)}</div><div class="small">Left at ${fmtT(B.out.since)}${over?" · over "+S.flag+" min":""}</div><button class="btn primary block" id="backBtn" style="margin-top:6px">${esc(s?s.name.split(" ")[0]:"Student")} is back</button></div>`;
+  }else if(!W.open){
+    const before=L.nm<W.a;
+    st=`<div class="status locked"><div class="big">${before?"Opens at "+fmtMin(W.a):"Closed for the rest of class"}</div><div class="small">${before?"No one leaves in the first "+S.noStart+" minutes. You can still join the queue.":"No one leaves in the last "+S.noEnd+" minutes."}</div></div>`;
+  }else{
+    const head=B.queue[0],hs=head?student(head):null;
+    st=`<div class="status open"><div class="big">${hs?esc(hs.name)+", you're up":"Bathroom is open"}</div><div class="small">${hs?"Tap Go when you leave.":"Join the queue to go."}</div>${hs?`<button class="btn go block" id="goBtn" style="margin-top:6px">Go now</button>`:""}</div>`;
+  }
+  const q=B.queue.map((id,i)=>{const s=student(id);return `<li><span class="pos num">${i+1}</span><span class="grow">${esc(s?s.name:"Student")}</span></li>`}).join("");
+  box.innerHTML=st+(q?`<div class="lbl" style="margin-bottom:6px">Queue</div><ol class="queue">${q}</ol>`:`<p class="qempty">Nobody in the queue.</p>`)+`<button class="btn block" id="joinBtn">Join the queue</button>`;
+  $("joinBtn").onclick=()=>openJoin(L);
+  const g=$("goBtn");if(g)g.onclick=()=>{const L2=live(),B2=bathFor(L2);if(!B2||B2.out||!B2.queue.length||!bathWindow(L2).open)return render();B2.out={id:B2.queue.shift(),since:Date.now()};save();render()};
+  const bk=$("backBtn");if(bk)bk.onclick=()=>markBack();
+}
+function markBack(){
+  const B=S.bath;if(!B||!B.out)return;const s=student(B.out.id);
+  S.bathLog.push({id:uid(),date:B.date,period:B.period,studentId:B.out.id,name:s?s.name:"Student",left:B.out.since,back:Date.now()});
+  B.out=null;save();render();toast("Welcome back.");
+}
+function openJoin(L){
+  const B=bathFor(L);if(!B)return;
+  const roster=S.periods[L.key].roster;
+  if(!roster.length){toast("Add a roster in Teacher settings first.");return}
+  showModal(`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="jT"><h3 id="jT">Join the bathroom queue</h3><p class="lead">Tap your name. One person out at a time.</p>
+  <div class="pick">${roster.map(s=>{const inQ=B.queue.includes(s.id),out=B.out&&B.out.id===s.id,ban=isBanned(s.id);return `<button data-id="${s.id}" ${inQ||out||ban?"disabled":""}>${esc(s.name)}${ban?"<small>See Mr. M</small>":inQ?"<small>In queue</small>":out?"<small>Out now</small>":""}</button>`}).join("")}</div>
+  <div class="row end"><button class="btn" id="jClose">Cancel</button></div></div>`);
+  $("jClose").onclick=closeModal;
+  document.querySelectorAll(".pick button[data-id]").forEach(b=>b.onclick=()=>{const L2=live(),B2=bathFor(L2);if(!B2)return closeModal();if(!B2.queue.includes(b.dataset.id)&&!isBanned(b.dataset.id)){B2.queue.push(b.dataset.id);save()}closeModal();render();toast("You're number "+(B2.queue.indexOf(b.dataset.id)+1)+" in line.")});
+}
+
+/* ---------- Modal ---------- */
+function showModal(html){const m=$("modal");m.innerHTML=`<div class="scrim">${html}</div>`;m.querySelector(".scrim").addEventListener("pointerdown",e=>{if(e.target.classList.contains("scrim"))closeModal()})}
+function closeModal(){$("modal").innerHTML=""}
+const modalOpen=()=>!!$("modal").firstChild;
+
+/* ---------- PIN ---------- */
+function askPin(ok){
+  let mode=S.pin?"enter":"new",first="",val="";
+  function draw(err){
+    const title=mode==="enter"?"Teacher PIN":mode==="new"?"Create a teacher PIN":"Type it again";
+    showModal(`<div class="sheet pinwrap" style="width:min(360px,100%)" role="dialog" aria-modal="true"><h3>${title}</h3><p class="lead">${mode==="enter"?"Settings are locked so students can't change logs.":"4 digits. You'll use this to open settings."}</p>
+    <div class="pindots">${[0,1,2,3].map(i=>`<i class="${i<val.length?"on":""}"></i>`).join("")}</div>
+    <div class="pinpad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join("")}<button data-n="x" aria-label="Cancel" style="font-size:15px">Cancel</button><button data-n="0">0</button><button data-n="b" aria-label="Delete">⌫</button></div>
+    <div class="pinerr">${err||""}</div></div>`);
+    document.querySelectorAll(".pinpad button").forEach(b=>b.onclick=()=>press(b.dataset.n));
+  }
+  function press(n){
+    if(n==="x")return closeModal();
+    if(n==="b"){val=val.slice(0,-1);return draw()}
+    if(val.length>=4)return;val+=n;
+    if(val.length<4)return draw();
+    if(mode==="enter"){if(val===S.pin){closeModal();ok()}else{val="";draw("Wrong PIN. Try again.")}}
+    else if(mode==="new"){first=val;val="";mode="confirm";draw()}
+    else{if(val===first){S.pin=val;save();closeModal();ok()}else{mode="new";val="";first="";draw("Those didn't match. Start over.")}}
+  }
+  draw();
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&modalOpen())closeModal()});
+
+/* ---------- Settings ---------- */
+let setTab="classes";
+function openSettings(tab){askPin(()=>{setTab=tab||setTab;drawSettings()})}
+$("gear").onclick=()=>openSettings();
+function drawSettings(){
+  const tabs=[["classes","Classes & rosters"],["late","Late log"],["bath","Bathroom"],["rules","Rules & schedule"],["data","Export & backup"]];
+  showModal(`<div class="sheet wide" role="dialog" aria-modal="true" aria-labelledby="stT">
+    <div class="set-head"><h3 id="stT">Teacher settings</h3><span class="spacer"></span><button class="btn primary" id="stDone">Done</button></div>
+    <div class="set-body"><nav class="set-nav">${tabs.map(([k,l])=>`<button data-t="${k}" aria-pressed="${k===setTab}">${l}</button>`).join("")}</nav><div class="set-pane" id="pane"></div></div></div>`);
+  $("stDone").onclick=()=>{closeModal();render()};
+  document.querySelectorAll(".set-nav button").forEach(b=>b.onclick=()=>{setTab=b.dataset.t;drawSettings()});
+  ({classes:paneClasses,late:paneLate,bath:paneBath,rules:paneRules,data:paneData})[setTab]($("pane"));
+}
+
+function paneClasses(el){
+  el.innerHTML=`<p class="note">Check the periods you teach and paste each roster, one name per line. Rosters and logs stay on this iPad only.</p>`+
+  KEYS.map(k=>{const P=S.periods[k];return `<div class="card"><label class="switch"><input type="checkbox" id="t-${k}" ${P.teach?"checked":""}> ${pName(k)}${/\d/.test(k)?"":" (Fridays only)"}</label>
+    <div ${P.teach?"":"hidden"} id="w-${k}" style="display:flex;flex-direction:column;gap:10px"><div class="field"><label for="l-${k}">Class name</label><input type="text" id="l-${k}" value="${esc(P.label)}" placeholder="APUSH"></div>
+    <div class="field"><label for="r-${k}">Roster (${P.roster.length})</label><textarea id="r-${k}" placeholder="One student per line">${esc(P.roster.map(r=>r.name).join("\n"))}</textarea></div></div></div>`}).join("")+
+  `<div class="row end"><button class="btn primary" id="saveClasses">Save classes</button></div>`;
+  KEYS.forEach(k=>$("t-"+k).onchange=e=>{$("w-"+k).hidden=!e.target.checked});
+  $("saveClasses").onclick=()=>{
+    KEYS.forEach(k=>{
+      const P=S.periods[k];P.teach=$("t-"+k).checked;P.label=$("l-"+k).value.trim();
+      const names=[...new Set($("r-"+k).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))];
+      P.roster=names.map(n=>P.roster.find(r=>r.name===n)||{id:uid(),name:n});
+    });
+    save();toast("Classes saved.");drawSettings();
+  };
+}
+
+let lateDate=null;
+function paneLate(el){
+  const today=dkey(new Date());
+  const dates=[...new Set(S.late.map(e=>e.date).concat(today))].sort().reverse();
+  if(!lateDate||!dates.includes(lateDate))lateDate=today;
+  const rows=S.late.filter(e=>e.date===lateDate).sort((a,b)=>a.period.localeCompare(b.period)||a.arrived-b.arrived);
+  const t=taught();
+  el.innerHTML=`<div class="row"><div class="field" style="width:220px"><label for="ld">Day</label><select id="ld">${dates.map(d=>`<option value="${d}" ${d===lateDate?"selected":""}>${fmtDate(d)}</option>`).join("")}</select></div></div>
+  <div class="tblwrap">${rows.length?`<table class="tbl"><thead><tr><th>Period</th><th>Student</th><th>Came in</th><th>Late</th><th>Signature</th><th></th></tr></thead><tbody>${rows.map(e=>{const p=periodOn(e.date,e.period);const st=p?p.start:e.start;const d=new Date(e.arrived);return `<tr><td>${pShort(e.period)}</td><td>${esc(e.name)}${e.edited?' <span class="note">edited</span>':""}</td><td><input type="time" step="1" data-id="${e.id}" class="edT" value="${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}" aria-label="Arrival time for ${esc(e.name)}"></td><td class="num">${lateMins(e.arrived,e.date,st)} min</td><td>${e.sig?`<img class="sigthumb" src="${e.sig}" alt="Signature">`:'<span class="note">Added by teacher</span>'}</td><td><button class="btn sm danger edD" data-id="${e.id}">Delete</button></td></tr>`}).join("")}</tbody></table>`:`<p class="note">No late arrivals on ${fmtDate(lateDate)}.</p>`}</div>
+  <div class="card"><h4>Add a late arrival</h4><div class="row">
+    <div class="field" style="width:150px"><label for="aP">Period</label><select id="aP">${t.map(k=>`<option value="${k}">${pName(k)}</option>`).join("")}</select></div>
+    <div class="field" style="flex:1;min-width:180px"><label for="aS">Student</label><select id="aS"></select></div>
+    <div class="field" style="width:170px"><label for="aT">Came in</label><input type="time" step="1" id="aT"></div>
+  </div><div class="row end"><button class="btn primary" id="aAdd">Add for ${fmtDate(lateDate)}</button></div></div>`;
+  $("ld").onchange=e=>{lateDate=e.target.value;paneLate(el)};
+  const fillS=()=>{const k=$("aP").value;$("aS").innerHTML=(k?S.periods[k].roster:[]).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")};
+  if($("aP")){$("aP").onchange=fillS;fillS()}
+  el.querySelectorAll(".edT").forEach(i=>i.onchange=()=>{const e=S.late.find(x=>x.id===i.dataset.id);if(!e||!i.value)return;const[h,m,s]=i.value.split(":").map(Number);const d=parseD(e.date);d.setHours(h,m,s||0,0);e.arrived=d.getTime();e.edited=true;const p=periodOn(e.date,e.period);if(p)e.mins=lateMins(e.arrived,e.date,p.start);save();paneLate(el);toast("Arrival time updated.")});
+  el.querySelectorAll(".edD").forEach(b=>b.onclick=()=>{if(b.dataset.armed){S.late=S.late.filter(x=>x.id!==b.dataset.id);save();paneLate(el);toast("Entry deleted.")}else{b.dataset.armed="1";b.textContent="Tap to confirm"}});
+  $("aAdd").onclick=()=>{
+    const k=$("aP").value,sid=$("aS").value,tv=$("aT").value;
+    if(!k||!sid||!tv){toast("Pick a period, a student and a time.");return}
+    const s=student(sid),p=periodOn(lateDate,k);if(!p){toast(pName(k)+" doesn't meet on "+fmtDate(lateDate)+".");return}
+    const[h,m,sec]=tv.split(":").map(Number);const d=parseD(lateDate);d.setHours(h,m,sec||0,0);
+    S.late.push({id:uid(),date:lateDate,period:k,label:S.periods[k].label,studentId:sid,name:s.name,start:p.start,arrived:d.getTime(),mins:lateMins(d.getTime(),lateDate,p.start),sig:null,edited:true});
+    save();paneLate(el);toast("Added.");
+  };
+}
+
+function paneBath(el){
+  const today=dkey(new Date());const B=S.bath&&S.bath.date===today?S.bath:null;
+  const log=S.bathLog.filter(e=>e.date===today).sort((a,b)=>a.left-b.left);
+  el.innerHTML=`<div class="card"><h4>Rules</h4><div class="row">
+    <div class="field"><label for="nS">No one leaves in the first</label><div class="row"><input type="number" min="0" max="40" id="nS" value="${S.noStart}"> <span>min</span></div></div>
+    <div class="field"><label for="nE">or the last</label><div class="row"><input type="number" min="0" max="40" id="nE" value="${S.noEnd}"> <span>min</span></div></div>
+    <div class="field"><label for="fl">Flag if out longer than</label><div class="row"><input type="number" min="1" max="60" id="fl" value="${S.flag}"> <span>min</span></div></div></div>
+    <p class="note">Fridays have 30 minute periods, so a 10 and 10 rule leaves a 10 minute window.</p></div>
+  <div class="card"><h4>Right now${B?" · "+pName(B.period):""}</h4>${B&&(B.out||B.queue.length)?`<ol class="queue">${B.out?`<li><span class="pos">↗</span><span class="grow">${esc((student(B.out.id)||{}).name||"Student")} is out since ${fmtT(B.out.since)}</span><button class="btn sm" id="qBack">Mark back</button></li>`:""}${B.queue.map((id,i)=>`<li><span class="pos num">${i+1}</span><span class="grow">${esc((student(id)||{}).name||"Student")}</span><button class="btn sm" data-up="${id}" ${i===0?"disabled":""} aria-label="Move up">↑</button><button class="btn sm danger" data-rm="${id}">Remove</button></li>`).join("")}</ol><div class="row end"><button class="btn danger" id="qClear">Clear queue</button></div>`:`<p class="note">Nobody out and nobody waiting.</p>`}</div>
+  <div class="card"><h4>Bathroom bans</h4><p class="note">Banned students can't join the queue. Their name shows as "See Mr. M".</p>${taught().map(k=>S.periods[k].roster.length?`<div class="lbl">${pName(k)}${S.periods[k].label?" · "+esc(S.periods[k].label):""}</div><div class="banlist">${S.periods[k].roster.map(s=>`<label class="${isBanned(s.id)?"on":""}"><input type="checkbox" data-ban="${s.id}" ${isBanned(s.id)?"checked":""}>${esc(s.name)}</label>`).join("")}</div>`:"").join("")||'<p class="note">Add rosters first.</p>'}</div>
+  <div class="card"><h4>Today's trips</h4>${log.length?`<div class="tblwrap"><table class="tbl"><thead><tr><th>Period</th><th>Student</th><th>Left</th><th>Back</th><th>Out</th><th></th></tr></thead><tbody>${log.map(e=>`<tr><td>${pShort(e.period)}</td><td>${esc(e.name)}</td><td class="num">${fmtT(e.left)}</td><td class="num">${e.back?fmtT(e.back):"Not marked"}</td><td class="num">${e.back?Math.round((e.back-e.left)/60000)+" min":""}</td><td><button class="btn sm danger" data-bl="${e.id}">Delete</button></td></tr>`).join("")}</tbody></table></div>`:'<p class="note">No trips logged today.</p>'}</div>`;
+  const num=(id,key,min)=>$(id).onchange=e=>{const v=parseInt(e.target.value,10);if(!isNaN(v)&&v>=min){S[key]=v;save();toast("Saved.")}};
+  num("nS","noStart",0);num("nE","noEnd",0);num("fl","flag",1);
+  el.querySelectorAll("[data-ban]").forEach(c=>c.onchange=()=>{const id=c.dataset.ban;S.bans=c.checked?[...new Set(S.bans.concat(id))]:S.bans.filter(x=>x!==id);if(c.checked&&S.bath)S.bath.queue=S.bath.queue.filter(x=>x!==id);save();c.parentElement.classList.toggle("on",c.checked)});
+  el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{S.bath.queue=S.bath.queue.filter(x=>x!==b.dataset.rm);save();paneBath(el)});
+  el.querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>{const q=S.bath.queue,i=q.indexOf(b.dataset.up);if(i>0){[q[i-1],q[i]]=[q[i],q[i-1]];save();paneBath(el)}});
+  el.querySelectorAll("[data-bl]").forEach(b=>b.onclick=()=>{if(b.dataset.armed){S.bathLog=S.bathLog.filter(x=>x.id!==b.dataset.bl);save();paneBath(el)}else{b.dataset.armed="1";b.textContent="Tap to confirm"}});
+  const qb=$("qBack");if(qb)qb.onclick=()=>{markBack();paneBath(el)};
+  const qc=$("qClear");if(qc)qc.onclick=()=>{S.bath.queue=[];save();paneBath(el);toast("Queue cleared.")};
+}
+
+function paneRules(el){
+  const today=dkey(new Date());const ov=S.override&&S.override.date===today?S.override.type:"auto";
+  el.innerHTML=`<div class="card"><h4>Late grace period</h4><div class="row"><input type="number" min="0" max="15" id="gr" value="${S.grace}"> <span>minutes after the bell</span></div><p class="note">Students who tap within the grace period are told they're on time and nothing is logged.</p></div>
+  <div class="card"><h4>Today's schedule</h4><div class="field" style="max-width:320px"><label for="ov">Use for ${fmtDate(today)}</label><select id="ov"><option value="auto" ${ov==="auto"?"selected":""}>Automatic (Mon to Thu regular, Fri short)</option><option value="regular" ${ov==="regular"?"selected":""}>Regular schedule</option><option value="friday" ${ov==="friday"?"selected":""}>Friday schedule</option><option value="none" ${ov==="none"?"selected":""}>No school</option></select></div><p class="note">This only changes today. Tomorrow goes back to automatic.</p></div>
+  <div class="card"><h4>Teacher PIN</h4><div class="row"><button class="btn" id="cpin">Change PIN</button></div></div>`;
+  $("gr").onchange=e=>{const v=parseInt(e.target.value,10);if(!isNaN(v)&&v>=0){S.grace=v;save();toast("Saved.")}};
+  $("ov").onchange=e=>{S.override=e.target.value==="auto"?null:{date:today,type:e.target.value};save();toast("Schedule updated.")};
+  $("cpin").onclick=()=>{S.pin=null;save();askPin(()=>{toast("PIN changed.");setTab="rules";drawSettings()})};
+}
+
+function paneData(el){
+  el.innerHTML=`<div class="card"><h4>Export to Excel</h4><p class="note">One file with three sheets: late arrivals with the exact time each student came in, bathroom trips, and totals per student.</p>
+    <div class="row"><select id="xr" style="max-width:220px"><option value="today">Today</option><option value="week">This week</option><option value="month">This month</option><option value="all">Everything</option></select><button class="btn primary" id="xg">Download Excel</button></div></div>
+  <div class="card"><h4>Backup</h4><p class="note">Everything lives in this browser on this iPad. Save a backup now and then so nothing is lost if the browser data gets cleared.</p>
+    <div class="row"><button class="btn" id="bk">Save backup file</button><label class="btn" for="rs" style="display:inline-flex;align-items:center">Restore from backup</label><input type="file" id="rs" accept=".json,application/json" hidden></div></div>
+  <div class="card"><h4>Clear logs</h4><p class="note">Keeps your rosters and settings, removes late and bathroom logs.</p><div class="row"><button class="btn danger" id="clr">Clear all logs</button></div></div>`;
+  $("xg").onclick=()=>exportXlsx($("xr").value);
+  $("bk").onclick=()=>saveFile("lincoln-check-in-backup-"+dkey(new Date())+".json",JSON.stringify(S));
+  $("rs").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!d.periods)throw 0;S=Object.assign(fresh(),d);save();toast("Backup restored.");drawSettings()}catch(_){toast("That file isn't a Lincoln Check In backup.")}};r.readAsText(f)};
+  $("clr").onclick=e=>{const b=e.target;if(b.dataset.armed){S.late=[];S.bathLog=[];save();toast("Logs cleared.");paneData(el)}else{b.dataset.armed="1";b.textContent="Tap again to clear everything"}};
+}
+
+/* ---------- Files ---------- */
+async function saveFile(name,data){
+  const type=name.endsWith(".xlsx")?"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"application/json";
+  const file=new File([data],name,{type});
+  try{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});toast("Saved. Look in the Files app.");return}
+  }catch(e){if(e&&e.name==="AbortError"){toast("Canceled.");return}}
+  const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);toast("Downloaded.");
+}
+function inRange(ds,range){
+  if(range==="all")return true;const now=new Date(),d=parseD(ds);
+  if(range==="today")return ds===dkey(now);
+  if(range==="month")return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+  const mon=new Date(now);mon.setHours(0,0,0,0);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));const end=new Date(mon);end.setDate(end.getDate()+7);
+  return d>=mon&&d<end;
+}
+function exportXlsx(range){
+  if(!window.XLSX){toast("The Excel tool didn't load. Check the connection and try again.");return}
+  const late=S.late.filter(e=>inRange(e.date,range)).sort((a,b)=>a.date.localeCompare(b.date)||a.period.localeCompare(b.period)||a.arrived-b.arrived);
+  const bath=S.bathLog.filter(e=>inRange(e.date,range)).sort((a,b)=>a.left-b.left);
+  const L1=[["Date","Day","Period","Class","Student","Bell time","Came in","Minutes late","Signed","Edited by teacher"]];
+  late.forEach(e=>{const p=periodOn(e.date,e.period);const st=p?p.start:e.start;L1.push([e.date,parseD(e.date).toLocaleDateString("en-US",{weekday:"long"}),pName(e.period),e.label||"",e.name,fmtMin(st),fmtT(e.arrived,true),lateMins(e.arrived,e.date,st),e.sig?"Yes":"No",e.edited?"Yes":"No"])});
+  const L2=[["Date","Period","Student","Left","Back","Minutes out"]];
+  bath.forEach(e=>L2.push([e.date,pName(e.period),e.name,fmtT(e.left,true),e.back?fmtT(e.back,true):"Not marked back",e.back?Math.round((e.back-e.left)/6000)/10:""]));
+  const tot={};
+  late.forEach(e=>{const k=e.period+"|"+e.name;const p=periodOn(e.date,e.period);const m=lateMins(e.arrived,e.date,p?p.start:e.start);tot[k]=tot[k]||{p:e.period,n:e.name,c:0,m:0,b:0};tot[k].c++;tot[k].m+=m});
+  bath.forEach(e=>{const k=e.period+"|"+e.name;tot[k]=tot[k]||{p:e.period,n:e.name,c:0,m:0,b:0};tot[k].b++});
+  const L3=[["Period","Student","Times late","Total minutes late","Bathroom trips"]];
+  Object.values(tot).sort((a,b)=>a.p.localeCompare(b.p)||b.c-a.c).forEach(t=>L3.push([pName(t.p),t.n,t.c,t.m,t.b]));
+  const wb=XLSX.utils.book_new();
+  const mk=(rows,w)=>{const ws=XLSX.utils.aoa_to_sheet(rows);ws["!cols"]=w.map(x=>({wch:x}));return ws};
+  XLSX.utils.book_append_sheet(wb,mk(L1,[11,11,10,10,24,10,13,13,8,16]),"Late arrivals");
+  XLSX.utils.book_append_sheet(wb,mk(L2,[11,10,24,13,16,12]),"Bathroom");
+  XLSX.utils.book_append_sheet(wb,mk(L3,[10,24,11,17,15]),"Totals");
+  const out=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  const label={today:dkey(new Date()),week:"week of "+dkey(new Date()),month:new Date().toLocaleDateString("en-US",{month:"long",year:"numeric"}),all:"all through "+dkey(new Date())}[range];
+  saveFile("Late and Bathroom Log "+label+".xlsx",new Blob([out]));
+}
+
+/* ---------- Ticks ---------- */
+function tick(){
+  const now=new Date();
+  $("clock").textContent=now.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+  const t=$("outTimer");if(t&&S.bath&&S.bath.out){const s=Math.floor((Date.now()-S.bath.out.since)/1000);t.textContent=Math.floor(s/60)+":"+pad(s%60)}
+}
+let wake=null;
+document.addEventListener("pointerdown",async()=>{if(!wake&&navigator.wakeLock){try{wake=await navigator.wakeLock.request("screen");wake.addEventListener("release",()=>wake=null)}catch(_){}}});
+render();tick();
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(_){}
+setInterval(tick,1000);
+setInterval(()=>{render()},5000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});
+</script>
+</body>
+</html>
